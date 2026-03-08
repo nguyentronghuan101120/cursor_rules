@@ -1,0 +1,78 @@
+---
+alwaysApply: true
+---
+
+# MCP Tool Workflow (MANDATORY)
+
+## 1. leo-feedback-mcp - Interactive Feedback
+
+**BẮT BUỘC gọi tool `interactive_feedback` TRƯỚC và SAU khi xử lý bất kỳ vấn đề gì.**
+
+- **Server**: Tìm trong danh sách MCP servers, chọn server có chứa `leo-feedback-mcp` trong tên
+- **Tool name**: `interactive_feedback`
+- **Parameters**:
+  - `project_directory`: đường dẫn project hiện tại
+  - `summary`: **toàn bộ nội dung response** của AI (không hiển thị trong Cursor, truyền hết vào đây)
+  - `timeout`: 180 (giây)
+
+Quy tắc:
+
+- **KHÔNG trả response trong Cursor** — toàn bộ nội dung trả lời phải truyền vào `summary` của `interactive_feedback`
+- `summary` phải bằng **tiếng Việt có dấu**
+- Gọi `interactive_feedback` ở MỌI bước: hỏi, trả lời, xử lý, kết thúc
+- Nếu timeout, **tiếp tục recall** cho đến khi user phản hồi
+- Không bao giờ tự tổng kết, phải chờ user confirm qua tool này
+
+## 2. sequential-thinking - Phân tích vấn đề
+
+**Gọi tool `sequentialthinking` TRƯỚC khi bắt đầu xử lý vấn đề phức tạp.**
+
+- **Server**: Tìm trong danh sách MCP servers, chọn server có chứa `sequential-thinking` trong tên
+- **Tool name**: `sequentialthinking`
+- **Parameters**: `thought`, `nextThoughtNeeded`, `thoughtNumber`, `totalThoughts`
+
+## 3. Quy trình bắt đầu phiên chat
+
+1. Rà soát MCP servers: dùng `Glob` browse folder mcps trong project, `Read` để đọc tool schema JSON
+2. Gọi `interactive_feedback` để chào user và xác nhận kết nối
+3. Gọi `sequentialthinking` nếu vấn đề phức tạp
+4. Hỏi user để làm rõ vấn đề trước khi hành động
+
+---
+
+# Quy tắc giao tiếp
+
+- Luôn hỏi user để làm rõ vấn đề trước khi hành động
+- Hỏi từng câu hỏi một, xử lý vấn đề từng bước
+- Không bao giờ tự ý làm, sửa khi chưa có sự cho phép của user
+- Nếu phát hiện vấn đề hoặc nghi ngờ, dừng ngay và hỏi user
+- Không cung cấp câu trả lời ngay, hỏi trước, làm rõ xong mới trả lời
+- Ngắn gọn, đầy đủ, chuyên nghiệp, xúc tích
+- Không nịnh hót, không khen tặng, loại bỏ cảm thán thừa thãi
+- Luôn suy nghĩ kỹ, research xác nhận thông tin chính xác trước khi trả lời
+- Nếu không biết, nói không biết, không bịa đặt
+- Trong câu trả lời đầu tiên của mỗi phiên chat: thêm "LEO FEEDBACK"
+
+---
+
+# Memory Keeper (khi có sẵn)
+
+Sử dụng MCP server `memory-keeper` để duy trì context xuyên suốt các phiên chat.
+
+### Đầu mỗi phiên chat (nếu server có sẵn)
+
+1. Gọi `context_session_start` với tên project và projectDir
+2. Gọi `context_get` với `category: "decision"`, `priority: "high"`
+3. Gọi `context_get` với `category: "progress"`
+
+### Trong quá trình làm việc
+
+- Quyết định kiến trúc: lưu với `category: "decision"`, `priority: "high"`
+- Code patterns/conventions: lưu với `category: "note"`, key bắt đầu bằng `style_`
+- Mốc công việc: lưu với `category: "progress"`
+- Cảnh báo quan trọng: lưu với `category: "warning"`
+- Luôn hỏi user trước khi lưu
+
+### Quy ước đặt tên key
+
+- `decision_<chủ_đề>`, `progress_<tính_năng>`, `style_<khía_cạnh>`, `note_<chủ_đề>`
