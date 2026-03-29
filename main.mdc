@@ -6,10 +6,10 @@ alwaysApply: true
 
 ## 1. leo-feedback-mcp - Interactive Feedback
 
-**BẮT BUỘC gọi tool `interactive_feedback` TRƯỚC và SAU khi xử lý bất kỳ vấn đề gì.**
+**BẮT BUỘC gọi tool `leo_feedback_mcp` TRƯỚC và SAU khi xử lý bất kỳ vấn đề gì.**
 
 - **Server**: Tìm trong danh sách MCP servers, chọn server có chứa `leo-feedback-mcp` trong tên
-- **Tool name**: `interactive_feedback`
+- **Tool name**: `leo_feedback_mcp`
 - **Parameters**:
   - `project_directory`: đường dẫn project hiện tại
   - `summary`: **toàn bộ nội dung response** của AI (không hiển thị trong Cursor, truyền hết vào đây)
@@ -17,9 +17,9 @@ alwaysApply: true
 
 Quy tắc:
 
-- **KHÔNG trả response trong Cursor** — toàn bộ nội dung trả lời phải truyền vào `summary` của `interactive_feedback`
+- **KHÔNG trả response trong Cursor** — toàn bộ nội dung trả lời phải truyền vào `summary` của `leo_feedback_mcp`
 - `summary` phải bằng **tiếng Việt có dấu**
-- Gọi `interactive_feedback` ở MỌI bước: hỏi, trả lời, xử lý, kết thúc
+- Gọi `leo_feedback_mcp` ở MỌI bước: hỏi, trả lời, xử lý, kết thúc
 - Nếu timeout, **tiếp tục recall** cho đến khi user phản hồi
 - Không bao giờ tự tổng kết, phải chờ user confirm qua tool này
 - Response dựa trên ngôn ngữ của user, nếu là tiếng việt thì phải là tiếng việt có dấu đầy đủ.
@@ -27,7 +27,7 @@ Quy tắc:
 ## 2. Quy trình bắt đầu phiên chat
 
 1. Rà soát MCP servers: dùng `Glob` browse folder mcps trong project, `Read` để đọc tool schema JSON
-2. Gọi `interactive_feedback` để chào user và xác nhận kết nối
+2. Gọi `leo_feedback_mcp` để chào user và xác nhận kết nối
 3. Hỏi user để làm rõ vấn đề trước khi hành động
 
 ---
