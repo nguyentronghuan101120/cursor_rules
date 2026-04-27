@@ -31,6 +31,48 @@ Quy tắc:
 
 ---
 
+# Sub Agent Workflow (Task tool)
+
+## Khi nào dùng sub agent?
+
+DÙNG khi:
+- Cần tìm kiếm/phân tích codebase lớn → `explore` (readonly, model nhanh)
+- Cần chạy nhiều shell commands verbose → `shell`
+- Cần research song song nhiều chủ đề → nhiều `explore` hoặc `generalPurpose` parallel
+- Task phức tạp có thể chia thành sub-tasks độc lập
+- Cần isolated context (output trung gian không làm bẩn main conversation)
+
+KHÔNG DÙNG khi:
+- Task đơn giản, 1-2 bước → làm trực tiếp
+- Đã biết chính xác file cần đọc/sửa → dùng Read/StrReplace trực tiếp
+- Search 1 keyword cụ thể → dùng Grep/Glob trực tiếp
+
+## Quy tắc parent ↔ sub agent
+
+1. Sub agent KHÔNG thấy lịch sử chat → parent PHẢI đưa ĐẦY ĐỦ context trong prompt
+2. Sub agent KHÔNG gọi `leo_feedback_mcp` hoặc bất kỳ MCP feedback nào
+3. Parent ghi rõ trong prompt: "KHÔNG gọi leo_feedback_mcp hoặc bất kỳ MCP tool nào" (trừ khi task yêu cầu MCP cụ thể)
+4. Parent nhận kết quả từ sub agent → tổng kết → gọi `leo_feedback_mcp` báo user
+5. Ưu tiên parallel: nếu nhiều sub-tasks độc lập → spawn nhiều Task cùng lúc trong 1 message
+6. Prompt cho sub agent: ngắn gọn, cụ thể, có expected output format
+
+## Subagent types có sẵn
+
+| Type | Mục đích | Readonly |
+|------|----------|----------|
+| `explore` | Search/phân tích codebase, nhanh | Có |
+| `generalPurpose` | Đa năng, multi-step tasks | Không |
+| `shell` | Git, npm, docker, terminal ops | Không |
+| `cursor-guide` | Đọc Cursor docs | Có |
+| `best-of-n-runner` | Chạy task trong git worktree riêng | Không |
+
+## Custom subagents (tùy chọn)
+
+Tạo file `.cursor/agents/<name>.md` với YAML frontmatter (name, description, model, readonly).
+Chỉ tạo khi có use case cụ thể lặp lại nhiều lần. Bắt đầu với 2-3 agents, thêm dần.
+
+---
+
 # Quy tắc tương tác
 
 - Hỏi user làm rõ trước khi hành động. Hỏi từng câu một.
