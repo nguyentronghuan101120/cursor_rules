@@ -73,6 +73,43 @@ Chỉ tạo khi có use case cụ thể lặp lại nhiều lần. Bắt đầu 
 
 ---
 
+# Code Intelligence (code-review-graph MCP)
+
+MCP server `code-review-graph` cung cấp structural code analysis: call graph, blast radius, architecture overview. Đã config trong `~/.cursor/mcp.json`.
+
+## Tự động khởi tạo
+
+Đầu phiên chat, kiểm tra `.code-review-graph/graph.db` trong project root:
+
+- **Không có graph.db + project có > 100 code files**: Hỏi user "Project chưa có code graph. Chạy `crg build` để tạo?" Nếu đồng ý, chạy: `uvx code-review-graph build`
+- **Có graph.db nhưng cũ hơn 24h**: chạy `uvx code-review-graph update` tự động, không cần hỏi.
+- **Có graph.db và mới**: dùng trực tiếp.
+
+## Quy tắc sử dụng
+
+- Ưu tiên MCP tools của `code-review-graph` cho câu hỏi cấu trúc: callers, callees, dependencies, blast radius, architecture.
+- Fall back Grep/Read chỉ khi: config/YAML/JSON, code mới chưa index, hoặc không có graph.db.
+- Không dùng CRG cho: fix lỗi 1 file, đọc config, edit file.
+
+## Tools chính (MCP server: code-review-graph)
+
+| Tool | Dùng khi |
+|---|---|
+| semantic_search_nodes | Tìm function/class theo tên |
+| query_graph | Callers, callees, imports, tests |
+| get_impact_radius | Blast radius khi file thay đổi |
+| get_review_context | Context cho code review |
+| get_architecture_overview | Kiến trúc tổng quan |
+| detect_changes | Risk-scored change impact |
+
+## Lưu ý
+
+- Graph cũ không gây lỗi, chỉ giảm hiệu quả. AI luôn có fallback.
+- Static analysis: không detect runtime dispatch, reflection.
+- Không kết luận "dead code" từ CRG. Dùng "không tìm thấy caller trong graph".
+
+---
+
 # Quy tắc tương tác
 
 - Hỏi user làm rõ trước khi hành động. Hỏi từng câu một.
