@@ -132,6 +132,15 @@ MCP server `code-review-graph` cung cấp structural code analysis: call graph, 
 - Verify claims before stating (file exists? API valid? syntax correct?). Don't assume.
 - Can't find source → say so. Don't invent references.
 
+## Anti-Hallucination (code analysis)
+- Không kết luận "dead code", "unused", "không ai dùng" chỉ từ Grep hoặc graph search. Dùng: "không tìm thấy caller qua [phương pháp] trong [phạm vi]".
+- Trước khi claim usage: kiểm tra function có phải interface method, generated code, hoặc public/exported.
+- Phân biệt rõ: verified fact (file tồn tại, function định nghĩa dòng X) vs inference (function có vẻ không được gọi). Ghi rõ giới hạn phương pháp.
+
+## Codebase Search Output
+- Khi rà soát codebase (tìm file, trace dependencies, kiểm tra pattern), trả kết quả structured (bảng, list). Không paste full file content vào output.
+- Ưu tiên: path + line number + mô tả ngắn, thay vì copy toàn bộ code block.
+
 ## Specificity
 - Specific > vague: "3 files in lib/auth/" not "some files were modified".
 - Ranked recommendations > unranked lists. Include criteria.
