@@ -7,165 +7,165 @@ alwaysApply: true
 
 ## leo-feedback-mcp - Interactive Feedback
 
-Bắt buộc gọi `leo_feedback_mcp` TRƯỚC và SAU mọi thao tác.
+Must call `leo_feedback_mcp` BEFORE and AFTER every action.
 
 - Server: `user-leo-feedback-mcp`
 - Tool: `leo_feedback_mcp`
 - Parameters:
-  - `project_directory`: đường dẫn project hiện tại (default: ".")
-  - `summary`: toàn bộ nội dung response, bằng tiếng Việt có dấu (default: "I have completed the requested task.")
-  - `timeout`: 180 (giây, luôn dùng giá trị này)
+  - `project_directory`: current project path (default: ".")
+  - `summary`: full response content in Vietnamese with diacritics (default: "I have completed the requested task.")
+  - `timeout`: 180 (seconds, always use this value)
 
-Quy tắc:
+Rules:
 
-- KHÔNG trả response trong Cursor — truyền hết vào `summary`
-- Gọi ở MỌI bước: hỏi, trả lời, xử lý, kết thúc
-- Nếu timeout, tiếp tục recall cho đến khi user phản hồi
-- Không tự tổng kết, chờ user confirm qua tool
+- DO NOT return response in Cursor — pass everything into `summary`
+- Call at EVERY step: ask, reply, process, finish
+- If timeout, keep recalling until user responds
+- Do not self-summarize, wait for user confirm via tool
 
-## Quy trình bắt đầu phiên chat
+## Chat Start Procedure
 
-1. Rà soát MCP servers: Glob browse folder mcps, Read đọc tool schema
-2. Gọi `leo_feedback_mcp` chào user, xác nhận kết nối
-3. Hỏi user làm rõ vấn đề trước khi hành động
+1. Scan MCP servers: Glob browse mcps folder, Read tool schemas
+2. Call `leo_feedback_mcp` to greet user, confirm connection
+3. Ask user to clarify the problem before taking action
 
 ---
 
 # Sub Agent Workflow (Task tool)
 
-## Khi nào dùng sub agent?
+## When to use sub agents?
 
-DÙNG khi:
-- Cần tìm kiếm/phân tích codebase lớn → `explore` (readonly, model nhanh)
-- Cần chạy nhiều shell commands verbose → `shell`
-- Cần research song song nhiều chủ đề → nhiều `explore` hoặc `generalPurpose` parallel
-- Task phức tạp có thể chia thành sub-tasks độc lập
-- Cần isolated context (output trung gian không làm bẩn main conversation)
+USE when:
+- Need to search/analyze large codebase → `explore` (readonly, fast model)
+- Need to run many verbose shell commands → `shell`
+- Need parallel research on multiple topics → multiple `explore` or `generalPurpose` parallel
+- Complex task can be split into independent sub-tasks
+- Need isolated context (intermediate output doesn't pollute main conversation)
 
-KHÔNG DÙNG khi:
-- Task đơn giản, 1-2 bước → làm trực tiếp
-- Đã biết chính xác file cần đọc/sửa → dùng Read/StrReplace trực tiếp
-- Search 1 keyword cụ thể → dùng Grep/Glob trực tiếp
+DO NOT USE when:
+- Simple task, 1-2 steps → do directly
+- Already know exact file to read/edit → use Read/StrReplace directly
+- Search 1 specific keyword → use Grep/Glob directly
 
-## Quy tắc parent ↔ sub agent
+## Parent ↔ sub agent rules
 
-1. Sub agent KHÔNG thấy lịch sử chat → parent PHẢI đưa ĐẦY ĐỦ context trong prompt
-2. Sub agent KHÔNG gọi `leo_feedback_mcp` hoặc bất kỳ MCP feedback nào
-3. Parent ghi rõ trong prompt: "KHÔNG gọi leo_feedback_mcp hoặc bất kỳ MCP tool nào" (trừ khi task yêu cầu MCP cụ thể)
-4. Parent nhận kết quả từ sub agent → tổng kết → gọi `leo_feedback_mcp` báo user
-5. Ưu tiên parallel: nếu nhiều sub-tasks độc lập → spawn nhiều Task cùng lúc trong 1 message
-6. Prompt cho sub agent: ngắn gọn, cụ thể, có expected output format
+1. Sub agent CANNOT see chat history → parent MUST provide FULL context in prompt
+2. Sub agent MUST NOT call `leo_feedback_mcp` or any MCP feedback tool
+3. Parent must state in prompt: "DO NOT call leo_feedback_mcp or any MCP tool" (unless task requires specific MCP)
+4. Parent receives result from sub agent → summarize → call `leo_feedback_mcp` to inform user
+5. Prefer parallel: if multiple independent sub-tasks → spawn multiple Tasks in 1 message
+6. Sub agent prompt: concise, specific, with expected output format
 
-## Subagent types có sẵn
+## Available subagent types
 
-| Type | Mục đích | Readonly |
-|------|----------|----------|
-| `explore` | Search/phân tích codebase, nhanh | Có |
-| `generalPurpose` | Đa năng, multi-step tasks | Không |
-| `shell` | Git, npm, docker, terminal ops | Không |
-| `cursor-guide` | Đọc Cursor docs | Có |
-| `best-of-n-runner` | Chạy task trong git worktree riêng | Không |
+| Type | Purpose | Readonly |
+|---|---|---|
+| `explore` | Search/analyze codebase, fast | Yes |
+| `generalPurpose` | Multi-purpose, multi-step tasks | No |
+| `shell` | Git, npm, docker, terminal ops | No |
+| `cursor-guide` | Read Cursor docs | Yes |
+| `best-of-n-runner` | Run task in isolated git worktree | No |
 
-## Custom subagents (tùy chọn)
+## Custom subagents (optional)
 
-Tạo file `.cursor/agents/<name>.md` với YAML frontmatter (name, description, model, readonly).
-Chỉ tạo khi có use case cụ thể lặp lại nhiều lần. Bắt đầu với 2-3 agents, thêm dần.
+Create file `.cursor/agents/<name>.md` with YAML frontmatter (name, description, model, readonly).
+Only create when there's a specific use case that repeats often. Start with 2-3 agents, add gradually.
 
 ---
 
 # Code Intelligence (code-review-graph MCP)
 
-MCP server `code-review-graph` cung cấp structural code analysis: call graph, blast radius, architecture overview. Đã config trong `~/.cursor/mcp.json`.
+MCP server `code-review-graph` provides structural code analysis: call graph, blast radius, architecture overview. Configured in `~/.cursor/mcp.json`.
 
-## Tự động khởi tạo
+## Auto-initialization
 
-Đầu phiên chat, kiểm tra `.code-review-graph/graph.db` trong project root:
+At chat start, check `.code-review-graph/graph.db` in project root:
 
-- **Không có graph.db + project có > 100 code files**: Hỏi user "Project chưa có code graph. Chạy `crg build` để tạo?" Nếu đồng ý, chạy: `uvx code-review-graph build`
-- **Có graph.db nhưng cũ hơn 24h**: chạy `uvx code-review-graph update` tự động, không cần hỏi.
-- **Có graph.db và mới**: dùng trực tiếp.
+- **No graph.db + project has > 100 code files**: Ask user "Project has no code graph. Run `crg build` to create?" If agreed, run: `uvx code-review-graph build`
+- **graph.db exists but older than 24h**: run `uvx code-review-graph update` automatically, no need to ask.
+- **graph.db exists and fresh**: use directly.
 
-## Quy tắc sử dụng
+## Usage rules
 
-- Ưu tiên MCP tools của `code-review-graph` cho câu hỏi cấu trúc: callers, callees, dependencies, blast radius, architecture.
-- Fall back Grep/Read chỉ khi: config/YAML/JSON, code mới chưa index, hoặc không có graph.db.
-- Không dùng CRG cho: fix lỗi 1 file, đọc config, edit file.
+- Prefer `code-review-graph` MCP tools for structural questions: callers, callees, dependencies, blast radius, architecture.
+- Fall back to Grep/Read only when: config/YAML/JSON, code not yet indexed, or no graph.db.
+- Do not use CRG for: fixing 1 file, reading config, editing file.
 
-## Tools chính (MCP server: code-review-graph)
+## Key tools (MCP server: code-review-graph)
 
-| Tool | Dùng khi |
+| Tool | Use when |
 |---|---|
-| semantic_search_nodes | Tìm function/class theo tên |
+| semantic_search_nodes | Find function/class by name |
 | query_graph | Callers, callees, imports, tests |
-| get_impact_radius | Blast radius khi file thay đổi |
-| get_review_context | Context cho code review |
-| get_architecture_overview | Kiến trúc tổng quan |
+| get_impact_radius | Blast radius when file changes |
+| get_review_context | Context for code review |
+| get_architecture_overview | High-level architecture |
 | detect_changes | Risk-scored change impact |
 
-## Lưu ý
+## Notes
 
-- Graph cũ không gây lỗi, chỉ giảm hiệu quả. AI luôn có fallback.
-- Static analysis: không detect runtime dispatch, reflection.
-- Không kết luận "dead code" từ CRG. Dùng "không tìm thấy caller trong graph".
+- Stale graph doesn't cause errors, only reduces effectiveness. AI always has fallback.
+- Static analysis: cannot detect runtime dispatch, reflection.
+- Do not conclude "dead code" from CRG. Use "no caller found via [method] in [scope]".
 
 ---
 
 # Research-First Protocol (ENFORCEMENT)
 
-## Khi nào BẮT BUỘC research?
-- Câu hỏi về libraries, frameworks, APIs, tools → BẮT BUỘC dùng WebSearch hoặc context7
-- Claims về version, release dates, deprecation, breaking changes → BẮT BUỘC verify
-- So sánh công nghệ → BẮT BUỘC search cả 2 phía
-- Tư vấn architecture/best practice → ƯU TIÊN search trước
+## When MUST research?
+- Questions about libraries, frameworks, APIs, tools → MANDATORY use WebSearch or context7
+- Claims about versions, release dates, deprecation, breaking changes → MANDATORY verify
+- Technology comparisons → MANDATORY search both sides
+- Architecture/best practice advice → PREFER search first
 
-## Khi nào KHÔNG cần research?
-- Syntax đơn giản (for loop, if/else)
+## When research is NOT needed?
+- Simple syntax (for loop, if/else)
 - Format code, rename variable
-- Giải thích code đang mở trong editor
-- Câu hỏi về project hiện tại (dùng Read/Grep thay vì WebSearch)
+- Explain code currently open in editor
+- Questions about current project itself (use Read/Grep instead of WebSearch)
 
 ## Confidence Scoring
-- Mọi factual claims: GHI RÕ ĐỘ TIN CẬY (%)
-- Nếu <90%: BẮT BUỘC research trước khi khẳng định
-- Không tìm được nguồn: NÓI RÕ "Tôi không chắc, cần xác minh"
-- KHÔNG BAO GIỜ bịa URL, version number, hoặc API signatures
+- All factual claims: STATE CONFIDENCE LEVEL (%)
+- If <90%: MUST research before asserting
+- If cannot find source: CLEARLY SAY "I'm not sure, needs verification"
+- NEVER fabricate URLs, version numbers, or API signatures
 
 ## Hooks enforcement
-- `stop` hook kiểm tra transcript: nếu có factual claims mà không có WebSearch/context7 → force re-research
-- Tự động enforce, không bypass được
+- `stop` hook checks transcript: if factual claims exist without WebSearch/context7 calls → forces re-research
+- This is automatic enforcement, cannot be bypassed
 
 ---
 
 # Scratchpad Protocol (ENFORCEMENT)
 
 ## .scratchpad.md
-- Đọc `.scratchpad.md` ĐẦU MỖI PHIÊN khi tiếp tục công việc trước
-- Giữ NGẮN GỌN — mục tiêu dưới 40 dòng:
-  - "Current State": tối đa 3-5 dòng, GHI ĐÈ (không append) mỗi phiên
-  - "Decisions Made": chỉ giữ entries 7 NGÀY GẦN NHẤT, xóa cũ hơn
-  - "Key Facts": chỉ facts liên quan đến công việc hiện tại
-  - "Open Questions": xóa câu đã trả lời ngay
-- Cập nhật SAU MỖI quyết định quan trọng
-- Nếu scratchpad vượt 50 dòng: prune entries cũ trước khi thêm mới
+- Read `.scratchpad.md` at START OF EVERY SESSION when continuing previous work
+- Keep it CONCISE — target under 40 lines total:
+  - "Current State": max 3-5 lines, overwrite (not append) each session
+  - "Decisions Made": keep only LAST 7 DAYS of entries, remove older ones
+  - "Key Facts": only facts relevant to current/active work
+  - "Open Questions": remove answered questions promptly
+- Update AFTER EVERY important decision
+- If scratchpad exceeds 50 lines: prune old entries before adding new ones
 
 ## Session history (.session-history/)
-- Tự tạo khi kết thúc phiên — chỉ metadata nhẹ (KHÔNG copy scratchpad)
-- Tự dọn: giữ tối đa 10 file, xóa cũ tự động
-- Khi tiếp tục công việc: chỉ đọc file session MỚI NHẤT, không đọc hết
-- Session history dùng cho continuity giữa các phiên, không phải long-term memory
+- Auto-generated on session end — lightweight metadata only (no scratchpad copy)
+- Auto-cleaned: keeps last 10 files, older ones deleted automatically
+- When continuing previous work: read ONLY the latest session file, not all of them
+- Session history is for continuity between sessions, not long-term memory
 
 ## Hooks enforcement
-- `beforeShellExecution` hook (matcher: `git commit`): git commit bị CHẶN nếu .scratchpad.md chưa update từ đầu phiên
-- Tự động enforce, không bypass được
+- `beforeShellExecution` hook (matcher: `git commit`): git commit is BLOCKED if .scratchpad.md not updated since session start
+- This is automatic enforcement, cannot be bypassed
 
 ---
 
-# Quy tắc tương tác
+# Interaction Rules
 
-- Hỏi user làm rõ trước khi hành động. Hỏi từng câu một.
-- Xử lý từng bước, chờ user confirm rồi mới tiếp.
-- Câu hỏi liên quan thông tin: research trước, xác nhận từ nguồn tin cậy.
-- Câu trả lời đầu tiên phải có "LEO FEEDBACK".
+- Ask user to clarify before taking action. Ask one question at a time.
+- Process step by step, wait for user confirm before proceeding.
+- Information-related questions: research first, verify from reliable sources.
+- First response must contain "LEO FEEDBACK".
 
 ---
 
@@ -183,13 +183,13 @@ MCP server `code-review-graph` cung cấp structural code analysis: call graph, 
 - Can't find source → say so. Don't invent references.
 
 ## Anti-Hallucination (code analysis)
-- Không kết luận "dead code", "unused", "không ai dùng" chỉ từ Grep hoặc graph search. Dùng: "không tìm thấy caller qua [phương pháp] trong [phạm vi]".
-- Trước khi claim usage: kiểm tra function có phải interface method, generated code, hoặc public/exported.
-- Phân biệt rõ: verified fact (file tồn tại, function định nghĩa dòng X) vs inference (function có vẻ không được gọi). Ghi rõ giới hạn phương pháp.
+- Do not conclude "dead code", "unused", "nobody uses" from Grep or graph search alone. Use: "no caller found via [method] in [scope]".
+- Before claiming usage: check if function is interface method, generated code, or public/exported.
+- Clearly distinguish: verified fact (file exists, function defined at line X) vs inference (function appears unused). State method limitations.
 
 ## Codebase Search Output
-- Khi rà soát codebase (tìm file, trace dependencies, kiểm tra pattern), trả kết quả structured (bảng, list). Không paste full file content vào output.
-- Ưu tiên: path + line number + mô tả ngắn, thay vì copy toàn bộ code block.
+- When scanning codebase (find files, trace dependencies, check patterns), return structured results (tables, lists). Do not paste full file content into output.
+- Prefer: path + line number + short description, instead of copying entire code blocks.
 
 ## Specificity
 - Specific > vague: "3 files in lib/auth/" not "some files were modified".
