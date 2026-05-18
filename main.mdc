@@ -110,6 +110,56 @@ MCP server `code-review-graph` cung cấp structural code analysis: call graph, 
 
 ---
 
+# Research-First Protocol (ENFORCEMENT)
+
+## Khi nào BẮT BUỘC research?
+- Câu hỏi về libraries, frameworks, APIs, tools → BẮT BUỘC dùng WebSearch hoặc context7
+- Claims về version, release dates, deprecation, breaking changes → BẮT BUỘC verify
+- So sánh công nghệ → BẮT BUỘC search cả 2 phía
+- Tư vấn architecture/best practice → ƯU TIÊN search trước
+
+## Khi nào KHÔNG cần research?
+- Syntax đơn giản (for loop, if/else)
+- Format code, rename variable
+- Giải thích code đang mở trong editor
+- Câu hỏi về project hiện tại (dùng Read/Grep thay vì WebSearch)
+
+## Confidence Scoring
+- Mọi factual claims: GHI RÕ ĐỘ TIN CẬY (%)
+- Nếu <90%: BẮT BUỘC research trước khi khẳng định
+- Không tìm được nguồn: NÓI RÕ "Tôi không chắc, cần xác minh"
+- KHÔNG BAO GIỜ bịa URL, version number, hoặc API signatures
+
+## Hooks enforcement
+- `stop` hook kiểm tra transcript: nếu có factual claims mà không có WebSearch/context7 → force re-research
+- Tự động enforce, không bypass được
+
+---
+
+# Scratchpad Protocol (ENFORCEMENT)
+
+## .scratchpad.md
+- Đọc `.scratchpad.md` ĐẦU MỖI PHIÊN khi tiếp tục công việc trước
+- Giữ NGẮN GỌN — mục tiêu dưới 40 dòng:
+  - "Current State": tối đa 3-5 dòng, GHI ĐÈ (không append) mỗi phiên
+  - "Decisions Made": chỉ giữ entries 7 NGÀY GẦN NHẤT, xóa cũ hơn
+  - "Key Facts": chỉ facts liên quan đến công việc hiện tại
+  - "Open Questions": xóa câu đã trả lời ngay
+- Cập nhật SAU MỖI quyết định quan trọng
+- Nếu scratchpad vượt 50 dòng: prune entries cũ trước khi thêm mới
+
+## Session history (.session-history/)
+- Tự tạo khi kết thúc phiên — chỉ metadata nhẹ (KHÔNG copy scratchpad)
+- Tự dọn: giữ tối đa 10 file, xóa cũ tự động
+- Khi tiếp tục công việc: chỉ đọc file session MỚI NHẤT, không đọc hết
+- Session history dùng cho continuity giữa các phiên, không phải long-term memory
+
+## Hooks enforcement
+- `beforeShellExecution` hook (matcher: `git commit`): git commit bị CHẶN nếu .scratchpad.md chưa update từ đầu phiên
+- Tự động enforce, không bypass được
+
+---
+
 # Quy tắc tương tác
 
 - Hỏi user làm rõ trước khi hành động. Hỏi từng câu một.
