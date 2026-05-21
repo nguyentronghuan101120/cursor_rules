@@ -110,6 +110,22 @@ At chat start, check `.code-review-graph/graph.db` in project root:
 
 ---
 
+# Figma MCP (rate-limit aware)
+
+Free plan = 6 read API calls/month. Two servers configured to optimize usage:
+
+| Action | Server | Tools | Rate limit |
+|--------|--------|-------|------------|
+| **Read design** (layout, styles, nodes) | `figma-cached` | `get_figma_data`, `download_figma_images` | Cached 30 days. First call = 1 quota, subsequent = 0 |
+| **Write/Generate** (create design, code connect) | `figma` (official) | `generate_figma_design`, `use_figma`, `add_code_connect_map`, `whoami` | FREE, no rate limit |
+
+Rules:
+- ALWAYS use `figma-cached` for reading design data — NEVER use `figma` official for reads
+- Use `figma` official only for write operations (generate_design, use_figma, code_connect)
+- When user pastes a Figma URL, extract fileKey and nodeId, then call `figma-cached` > `get_figma_data`
+
+---
+
 # Research-First Protocol (ENFORCEMENT)
 
 ## When MUST research?
