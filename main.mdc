@@ -110,6 +110,54 @@ At chat start, check `.code-review-graph/graph.db` in project root:
 
 ---
 
+# Coding Workflow Protocol
+
+When working on ANY coding task, follow this 3-phase workflow. Scale effort to task complexity.
+
+## Phase 1: UNDERSTAND (before writing code)
+
+For non-trivial changes (new feature, refactor, bug in unfamiliar code):
+
+1. **Check graph freshness**: Call `list_graph_stats_tool` — if `last_updated` > 24h or null, run `uvx code-review-graph update` first.
+2. **Understand structure**: Call `get_architecture_overview_tool` (detail_level: "minimal") to see communities and coupling.
+3. **Find relevant code**: Use `semantic_search_nodes_tool` (query + kind filter) BEFORE Grep. It returns file path, line number, and signature — more useful than raw text matches.
+4. **Check relationships**: For each function/class you plan to modify, call `query_graph_tool` with pattern `callers_of` to find all call sites. This prevents breaking callers.
+5. **Assess blast radius**: Call `get_impact_radius_tool` with the files you plan to change. Review the impacted files list BEFORE coding.
+
+For simple changes (typo fix, add comment, change 1 value): skip to Phase 2.
+
+## Phase 2: IMPLEMENT
+
+6. **Read before edit**: Always Read the target file before StrReplace. Never edit blind.
+7. **Cross-file changes**: When modifying a function signature, use `query_graph_tool` (pattern: `callers_of`) to find all call sites and update them.
+8. **Check lint after each file**: Call ReadLints on edited files immediately.
+
+## Phase 3: VERIFY
+
+9. **Re-check impact**: Call `detect_changes_tool` to verify your changes don't introduce unexpected risk.
+10. **Summarize**: Report what changed, what was verified, and any remaining risks via leo_feedback_mcp.
+
+## Tool Priority Table
+
+| Need | Primary tool | Fallback |
+|------|-------------|----------|
+| Find function/class by name | `semantic_search_nodes_tool` (CRG) | Grep |
+| Who calls this function? | `query_graph_tool` pattern=callers_of | Grep |
+| What does this function call? | `query_graph_tool` pattern=callees_of | Read file |
+| Blast radius of a change | `get_impact_radius_tool` (CRG) | Manual trace |
+| Project architecture overview | `get_architecture_overview_tool` (CRG) | Read directory tree |
+| Exact string match | Grep | - |
+| Find file by name | Glob | - |
+| Config/YAML/JSON content | Read/Grep | - |
+
+## When NOT to use CRG
+
+- Project has no graph.db and < 50 code files → Grep is sufficient
+- Searching config files, env vars, translation keys → Grep is better
+- Reading/editing a single known file → Read/StrReplace directly
+
+---
+
 # Figma MCP (rate-limit aware)
 
 Free plan = 6 read API calls/month. Two servers configured to optimize usage:
